@@ -74,6 +74,10 @@ typedef struct PackLocation {
 
 class HemisphereApplet {
 public:
+    static uint8_t modal_edit_mode;
+    static void CycleEditMode() {
+        ++modal_edit_mode %= 3;
+    }
 
     virtual const char* applet_name(); // Maximum of 9 characters
     virtual void Start();
@@ -181,10 +185,35 @@ public:
         }
     }
 
+    // handle modal edit mode toggle or cursor advance
+    void CursorAction(int &cursor, int max) {
+        if (modal_edit_mode) {
+            isEditing = !isEditing;
+        } else {
+            cursor++;
+            cursor %= max + 1;
+            ResetCursor();
+        }
+    }
+    void MoveCursor(int &cursor, int direction, int max) {
+        cursor += direction;
+        if (modal_edit_mode == 2) { // wrap cursor
+            if (cursor < 0) cursor = max;
+            else cursor %= max + 1;
+        } else {
+            cursor = constrain(cursor, 0, max);
+        }
+        ResetCursor();
+    }
+    bool EditMode() {
+        return (isEditing || !modal_edit_mode);
+    }
+
     //////////////// Offset graphics methods
     ////////////////////////////////////////////////////////////////////////////////
-    void gfxCursor(int x, int y, int w) {
-        if (CursorBlink()) gfxLine(x, y, x + w - 1, y);
+    void gfxCursor(int x, int y, int w, int h = 9) { // assumes standard text height for highlighting
+        if (isEditing) gfxInvert(x, y - h, w, h);
+        else if (CursorBlink()) gfxLine(x, y, x + w - 1, y);
     }
 
     void gfxPos(int x, int y) {
@@ -325,23 +354,34 @@ public:
      */
     bool Clock(int ch, bool physical = 0) {
         bool clocked = 0;
-        if (hemisphere == 0) {
-            if (ch == 0) clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_1>();
-            if (ch == 1) clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_2>();
-        } else if (hemisphere == 1) {
-            if (ch == 0) clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_3>();
-            if (ch == 1) clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_4>();
+        ClockManager *clock_m = clock_m->get();
+
+        if (ch == 0) { // clock triggers
+            if (hemisphere == LEFT_HEMISPHERE) {
+                if (!physical && clock_m->IsRunning() && clock_m->GetMultiply(hemisphere) != 0)
+                    clocked = clock_m->Tock(hemisphere);
+                else
+                    clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_1>();
+            } else { // right side is special
+                if (!physical && clock_m->IsRunning() && clock_m->GetMultiply(hemisphere) != 0)
+                    clocked = clock_m->Tock(hemisphere);
+                else if (master_clock_bus) // forwarding from left
+                    clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_1>();
+                else
+                    clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_3>();
+            }
+        } else if (ch == 1) { // simple physical trig check
+            if (hemisphere == LEFT_HEMISPHERE)
+                clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_2>();
+            else
+                clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_4>();
         }
 
-        if (ch == 0 && !physical) {
-            ClockManager *clock_m = clock_m->get();
-            if (clock_m->IsRunning()) clocked = clock_m->Tock();
-            else if (master_clock_bus) clocked = OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_1>();
-        }
+        clocked = clocked || clock_m->Beep(hemisphere*2 + ch);
 
         if (clocked) {
-        		cycle_ticks[ch] = OC::CORE::ticks - last_clock[ch];
-        		last_clock[ch] = OC::CORE::ticks;
+            cycle_ticks[ch] = OC::CORE::ticks - last_clock[ch];
+            last_clock[ch] = OC::CORE::ticks;
         }
         return clocked;
     }
@@ -376,6 +416,7 @@ public:
 
 protected:
     bool hemisphere; // Which hemisphere (0, 1) this applet uses
+    bool isEditing = false; // modal editing toggle
     const char* help[4];
     virtual void SetHelp();
 
@@ -447,6 +488,7 @@ protected:
     }
 
     bool EndOfADCLag(int ch = 0) {
+        if (adc_lag_countdown[ch] < 0) return false;
         return (--adc_lag_countdown[ch] == 0);
     }
 
@@ -466,7 +508,9 @@ private:
     bool master_clock_bus; // Clock forwarding was on during the last ISR cycle
     bool applet_started; // Allow the app to maintain state during switching
     int last_view_tick; // Tick number of the most recent view
-    int help_active;
+    bool help_active;
     bool changed_cv[2]; // Has the input changed by more than 1/8 semitone since the last read?
     int last_cv[2]; // For change detection
 };
+
+uint8_t HemisphereApplet::modal_edit_mode = 1; // 0=old behavior, 1=modal editing, 2=modal with wraparound

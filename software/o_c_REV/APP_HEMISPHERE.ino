@@ -54,7 +54,7 @@ typedef struct Applet {
   void (*OnDataReceive)(bool, uint64_t); // Send a data int to the applet
 } Applet;
 
-// The settings specify the selected applets, and 32 bits of data for each applet
+// The settings specify the selected applets, and 64 bits of data for each applet
 enum HEMISPHERE_SETTINGS {
     HEMISPHERE_SELECTED_LEFT_ID,
     HEMISPHERE_SELECTED_RIGHT_ID,
@@ -66,7 +66,8 @@ enum HEMISPHERE_SETTINGS {
     HEMISPHERE_RIGHT_DATA_B3,
     HEMISPHERE_LEFT_DATA_B4,
     HEMISPHERE_RIGHT_DATA_B4,
-    HEMISPHERE_CLOCK_DATA,
+    HEMISPHERE_CLOCK_DATA1,
+    HEMISPHERE_CLOCK_DATA2,
     HEMISPHERE_SETTING_LAST
 };
 
@@ -103,7 +104,8 @@ public:
                 (uint64_t(values_[2 + h]));
             available_applets[index].OnDataReceive(h, data);
         }
-        ClockSetup.OnDataReceive(0, uint64_t(values_[HEMISPHERE_CLOCK_DATA]));
+        ClockSetup.OnDataReceive(0, (uint64_t(values_[HEMISPHERE_CLOCK_DATA2]) << 16) |
+                                    uint64_t(values_[HEMISPHERE_CLOCK_DATA1]));
     }
 
     void SetApplet(int hemisphere, int index) {
@@ -136,7 +138,12 @@ public:
             }
         }
 
-        if (clock_setup) ClockSetup.Controller(LEFT_HEMISPHERE, clock_m->IsForwarded());
+        // Advance internal clock, sync to external pulse
+        if (clock_m->IsRunning())
+            clock_m->SyncTrig( OC::DigitalInputs::clocked<OC::DIGITAL_INPUT_1>() );
+
+        // NJM: always execute ClockSetup controller - it handles MIDI clock out
+        ClockSetup.Controller(LEFT_HEMISPHERE, clock_m->IsForwarded());
 
         for (int h = 0; h < 2; h++)
         {
@@ -187,10 +194,13 @@ public:
     }
 
     void DelegateSelectButtonPush(int hemisphere) {
-        if (OC::CORE::ticks - click_tick < HEMISPHERE_DOUBLE_CLICK_TIME && hemisphere == first_click) {
+        if (OC::CORE::ticks - click_tick < HEMISPHERE_DOUBLE_CLICK_TIME) {
             // This is a double-click, so activate corresponding help screen, leave
             // Select Mode, and reset the double-click timer
-            SetHelpScreen(hemisphere);
+            if (hemisphere == first_click)
+                SetHelpScreen(hemisphere);
+            else // up + down simultaneous
+                clock_setup = 1;
             select_mode = -1;
             click_tick = 0;
         } else {
@@ -203,12 +213,13 @@ public:
                 // If we're in the clock setup screen, we want to exit the setup without turning on Select Mode
                 if (hemisphere == select_mode) select_mode = -1; // Leave Select Mode is same button is pressed
                 else select_mode = hemisphere; // Otherwise, set Select Mode
-                click_tick = OC::CORE::ticks;
             }
+            click_tick = OC::CORE::ticks;
             first_click = hemisphere;
         }
 
-        clock_setup = 0; // Turn off clock setup with any button press
+        if (click_tick)
+            clock_setup = 0; // Turn off clock setup with any single button press
     }
 
     void DelegateEncoderMovement(const UI::Event &event) {
@@ -257,7 +268,9 @@ public:
             apply_value(6 + h, (data >> 32) & 0xffff);
             apply_value(8 + h, (data >> 48) & 0xffff);
         }
-        apply_value(HEMISPHERE_CLOCK_DATA, ClockSetup.OnDataRequest(0));
+        uint64_t data = ClockSetup.OnDataRequest(0);
+        apply_value(HEMISPHERE_CLOCK_DATA1, data & 0xffff);
+        apply_value(HEMISPHERE_CLOCK_DATA2, (data >> 16) & 0xffff);
     }
 
     void OnSendSysEx() {
@@ -362,7 +375,8 @@ SETTINGS_DECLARE(HemisphereManager, HEMISPHERE_SETTING_LAST) {
     {0, 0, 65535, "Data R block 3", NULL, settings::STORAGE_TYPE_U16},
     {0, 0, 65535, "Data L block 4", NULL, settings::STORAGE_TYPE_U16},
     {0, 0, 65535, "Data R block 4", NULL, settings::STORAGE_TYPE_U16},
-    {0, 0, 65535, "Clock data", NULL, settings::STORAGE_TYPE_U16}
+    {0, 0, 65535, "Clock data 1", NULL, settings::STORAGE_TYPE_U16},
+    {0, 0, 65535, "Clock data 2", NULL, settings::STORAGE_TYPE_U16}
 };
 
 HemisphereManager manager;
