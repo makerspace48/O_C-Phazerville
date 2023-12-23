@@ -595,7 +595,7 @@ private:
             break;
 
         case CURSOR_MODE:
-            HS::CycleEditMode();
+            HS::cursor_wrap = !HS::cursor_wrap;
             break;
         }
     }
@@ -628,9 +628,9 @@ private:
         gfxPrint(1, 45, "Screensaver:  ");
         gfxPrint( ssmodes[HS::screensaver_mode] );
 
-        const char * cursor_mode_name[3] = { "legacy", "modal", "modal+wrap" };
+        const char * cursor_mode_name[3] = { "modal", "modal+wrap" };
         gfxPrint(1, 55, "Cursor:  ");
-        gfxPrint(cursor_mode_name[HS::modal_edit_mode]);
+        gfxPrint(cursor_mode_name[HS::cursor_wrap]);
         
         switch (config_cursor) {
         case LOAD_PRESET:
