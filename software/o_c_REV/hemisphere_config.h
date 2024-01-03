@@ -51,6 +51,7 @@
     DECLARE_APPLET( 73, 0x08, MultiScale), \
     DECLARE_APPLET( 20, 0x02, Palimpsest), \
     DECLARE_APPLET( 71, 0x02, Pigeons), \
+    DECLARE_APPLET( 68, 0x06, PolySkip), \
     DECLARE_APPLET( 59, 0x04, ProbabilityDivider), \
     DECLARE_APPLET( 62, 0x04, ProbabilityMelody), \
     DECLARE_APPLET( 70, 0x14, ResetClock), \
