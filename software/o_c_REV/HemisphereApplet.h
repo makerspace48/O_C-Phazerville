@@ -158,6 +158,9 @@ public:
         if (!applet_started) {
             applet_started = true;
             Start();
+            ForEachChannel(ch) {
+                Out(ch, 0); // reset outputs
+            }
         }
     }
 
