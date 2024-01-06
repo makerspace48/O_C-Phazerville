@@ -26,8 +26,8 @@
 class PolyDiv : public HemisphereApplet {
 public:
 
-    static constexpr int MAX_DIV = 32;
-    static constexpr int NUM_STEPS = 5;
+    static constexpr uint8_t MAX_DIV = 32;
+    static constexpr uint8_t NUM_STEPS = 5;
 
     enum PolyDivCursor {
         STEP1A, STEP2A, STEP3A, STEP4A, STEP5A,
@@ -181,24 +181,16 @@ private:
       ForEachChannel(ch) {
         for(int i = 0; i < NUM_STEPS; i++) {
           gfxPrint(1 + 31*ch, 15 + (i*10), div_seq[ch].steps[i]);
-          DrawKnobAt(14 + 31*ch, 15 + (i*10), 12, div_seq[ch].steps[i], cursor == i+ch*NUM_STEPS);
+          DrawSlider(14 + 31*ch, 15 + (i*10), 15, div_seq[ch].steps[i], MAX_DIV, cursor == i+ch*NUM_STEPS);
+
           if (div_seq[ch].step_index == i)
             gfxIcon(27 + 31*ch, 15 + i*10, LEFT_BTN_ICON);
-
         }
         // flash division when triggered
         if (pulse_animation[ch] > 0 && div_seq[ch].step_index >= 0) {
           gfxInvert(1 + 31*ch, 15 + (div_seq[ch].step_index*10), 12, 8);
         }
       }
-    }
-
-    void DrawKnobAt(uint8_t x, uint8_t y, uint8_t len, uint8_t value, bool is_cursor) {
-        uint8_t p = is_cursor ? 1 : 3;
-        uint8_t w = Proportion(value, MAX_DIV, len-1);
-        gfxDottedLine(x, y + 3, x + len, y + 3, p);
-        gfxRect(x + w, y, 2, 7);
-        if (EditMode() && is_cursor) gfxInvert(x-1, y, len+3, 7);
     }
 
 };

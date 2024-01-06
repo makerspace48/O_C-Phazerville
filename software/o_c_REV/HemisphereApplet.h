@@ -342,6 +342,14 @@ public:
         //gfxLine(0, 11, 62, 11);
     }
 
+    void DrawSlider(uint8_t x, uint8_t y, uint8_t len, uint8_t value, uint8_t max_val, bool is_cursor) {
+        uint8_t p = is_cursor ? 1 : 3;
+        uint8_t w = Proportion(value, max_val, len-1);
+        gfxDottedLine(x, y + 4, x + len, y + 4, p);
+        gfxRect(x + w, y, 2, 8);
+        if (EditMode() && is_cursor) gfxInvert(x-1, y, len+3, 8);
+    }
+
     //////////////// Offset I/O methods
     ////////////////////////////////////////////////////////////////////////////////
     int In(int ch) {

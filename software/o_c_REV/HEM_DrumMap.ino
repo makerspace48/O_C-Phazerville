@@ -33,6 +33,8 @@
 class DrumMap : public HemisphereApplet {
 public:
 
+    static constexpr int MAX_VAL = 255;
+
     const char* applet_name() {
         return "DrumMap";
     }
@@ -51,18 +53,18 @@ public:
 
         switch (cv_mode) {
         case 0:
-          Modulate(_fill[0], 0, 0, 255);
-          Modulate(_fill[1], 1, 0, 255);
+          Modulate(_fill[0], 0, 0, MAX_VAL);
+          Modulate(_fill[1], 1, 0, MAX_VAL);
           break;
 
         case 1:
-          Modulate(_x, 0, 0, 255);
-          Modulate(_y, 1, 0, 255);
+          Modulate(_x, 0, 0, MAX_VAL);
+          Modulate(_y, 1, 0, MAX_VAL);
           break;
 
         case 2:
-          Modulate(_fill[0], 0, 0, 255);
-          Modulate(_chaos, 1, 0, 255);
+          Modulate(_fill[0], 0, 0, MAX_VAL);
+          Modulate(_chaos, 1, 0, MAX_VAL);
           break;
         }
 
@@ -80,7 +82,7 @@ public:
                 // accent on ch 1 will be for whatever part ch 0 is set to
                 uint8_t part = (ch == 1 && mode[ch] == 3) ? mode[0] : mode[ch];
                 int level = ReadDrumMap(step, part, _x, _y);
-                level = constrain(level + randomness[part], 0, 255);
+                level = constrain(level + randomness[part], 0, MAX_VAL);
                 // use ch 0 fill if ch 1 is in accent mode
                 uint8_t threshold = (ch == 1 && mode[ch] == 3) ? ~_fill[0] : ~_fill[ch];
                 if (level > threshold) {
@@ -160,21 +162,21 @@ public:
             break;
         // fill
         case 2:
-            fill[0] = constrain(fill[0] + (direction * accel), 0, 255);
+            fill[0] = constrain(fill[0] + (direction * accel), 0, MAX_VAL);
             break;
         case 3:
-            fill[1] = constrain(fill[1] + (direction * accel), 0, 255);
+            fill[1] = constrain(fill[1] + (direction * accel), 0, MAX_VAL);
             break;
         // x/y
         case 4:
-            x = constrain(x + (direction * accel), 0, 255);
+            x = constrain(x + (direction * accel), 0, MAX_VAL);
             break;
         case 5:
-            y = constrain(y + (direction * accel), 0, 255);
+            y = constrain(y + (direction * accel), 0, MAX_VAL);
             break;
         // chaos
         case 6:
-            chaos = constrain(chaos + (direction * accel), 0, 255);
+            chaos = constrain(chaos + (direction * accel), 0, MAX_VAL);
             break;
         // cv assign
         case 7:
@@ -300,22 +302,22 @@ private:
 
         // fill
         gfxPrint(1,25,"F");
-        DrawKnobAt(9,25,20,_fill[0],cursor == 2);
+        DrawSlider(9,25,20,_fill[0], MAX_VAL, cursor == 2);
         // don't show fill for channel b if it is an accent mode
         if (mode[1] < 3) {
             gfxPrint(32,25,"F");
-            DrawKnobAt(40,25,20,_fill[1],cursor == 3);
+            DrawSlider(40,25,20,_fill[1], MAX_VAL, cursor == 3);
         }
         
         // x & y
         gfxPrint(1,35,"X");
-        DrawKnobAt(9,35,20,_x,cursor == 4);
+        DrawSlider(9,35,20,_x, MAX_VAL, cursor == 4);
         gfxPrint(32,35,"Y");
-        DrawKnobAt(40,35,20,_y,cursor == 5);
+        DrawSlider(40,35,20,_y, MAX_VAL, cursor == 5);
         
         // chaos
         gfxPrint(1,45,"CHAOS");
-        DrawKnobAt(32,45,28,_chaos,cursor == 6);
+        DrawSlider(32,45,28,_chaos, MAX_VAL, cursor == 6);
         
         // step count in header
         gfxPrint((step < 9 ? 49 : 43),2,step+1);
@@ -342,14 +344,6 @@ private:
           if (cursor == 7) gfxCursor(10,63,50); // CV Assign
         }
 
-    }
-
-    void DrawKnobAt(byte x, byte y, byte len, byte value, bool is_cursor) {
-        byte w = Proportion(value, 255, len-1); // minus 1 because width is 2
-        byte p = is_cursor ? 1 : 3;
-        gfxDottedLine(x, y + 4, x + len, y + 4, p);
-        gfxRect(x + w, y, 2, 8);
-        if (is_cursor && EditMode()) gfxInvert(x, y, len+1, 8);
     }
 
     void Reset() {

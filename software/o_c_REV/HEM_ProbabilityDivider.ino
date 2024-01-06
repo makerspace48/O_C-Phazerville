@@ -20,11 +20,11 @@
 
 #include "HSProbLoopLinker.h" // singleton for linking ProbDiv and ProbMelo
 
-#define HEM_PROB_DIV_MAX_WEIGHT 15
-#define HEM_PROB_DIV_MAX_LOOP_LENGTH 32
-
 class ProbabilityDivider : public HemisphereApplet {
 public:
+
+    static constexpr uint8_t MAX_WEIGHT = 15;
+    static constexpr uint8_t MAX_LOOP_LENGTH = 32;
 
     enum ProbDivCursor {
         WEIGHT1, WEIGHT2, WEIGHT4, WEIGHT8,
@@ -56,7 +56,7 @@ public:
         // CV 1 control over loop length
         loop_length_mod = loop_length;
         if (DetentedIn(0)) {
-            Modulate(loop_length_mod, 0, 0, HEM_PROB_DIV_MAX_LOOP_LENGTH);
+            Modulate(loop_length_mod, 0, 0, MAX_LOOP_LENGTH);
             // TODO: regenerate if changing from 0?
         }
 
@@ -147,13 +147,13 @@ public:
         }
 
         switch ((ProbDivCursor)cursor) {
-        case WEIGHT1: weight_1 = constrain(weight_1 + direction, 0, HEM_PROB_DIV_MAX_WEIGHT); break;
-        case WEIGHT2: weight_2 = constrain(weight_2 + direction, 0, HEM_PROB_DIV_MAX_WEIGHT); break;
-        case WEIGHT4: weight_4 = constrain(weight_4 + direction, 0, HEM_PROB_DIV_MAX_WEIGHT); break;
-        case WEIGHT8: weight_8 = constrain(weight_8 + direction, 0, HEM_PROB_DIV_MAX_WEIGHT); break;
+        case WEIGHT1: weight_1 = constrain(weight_1 + direction, 0, MAX_WEIGHT); break;
+        case WEIGHT2: weight_2 = constrain(weight_2 + direction, 0, MAX_WEIGHT); break;
+        case WEIGHT4: weight_4 = constrain(weight_4 + direction, 0, MAX_WEIGHT); break;
+        case WEIGHT8: weight_8 = constrain(weight_8 + direction, 0, MAX_WEIGHT); break;
         case LOOP_LENGTH: {
             int old = loop_length;
-            loop_length = constrain(loop_length + direction, 0, HEM_PROB_DIV_MAX_LOOP_LENGTH);
+            loop_length = constrain(loop_length + direction, 0, MAX_LOOP_LENGTH);
             if (old == 0 && loop_length > 0) {
                 // seed loop
                 GenerateLoop(true);
@@ -209,7 +209,7 @@ private:
     int weight_4;
     int weight_8;
     int loop_length, loop_length_mod;
-    int loop[HEM_PROB_DIV_MAX_LOOP_LENGTH];
+    int loop[MAX_LOOP_LENGTH];
     int loop_index;
     int loop_step;
     // used to keep track of reseed cv inputs so it only reseeds on rising edge
@@ -231,7 +231,7 @@ private:
         for(int i = 0; i < 4; i++) {
           gfxPrint(1, 15 + (i*10), "/");
           gfxPrint(divs[i]);
-          DrawKnobAt(20, 15 + (i*10), 40, *weights[i], cursor == i);
+          DrawSlider(20, 15 + (i*10), 40, *weights[i], MAX_WEIGHT, cursor == i);
 
           // flash division when triggered
           if (pulse_animation > 0 && skip_steps == divs[i]) {
@@ -255,14 +255,6 @@ private:
         if (reset_animation > 0) {
             gfxPrint(52, 55, "R");
         }
-    }
-
-    void DrawKnobAt(byte x, byte y, byte len, byte value, bool is_cursor) {
-        byte p = is_cursor ? 1 : 3;
-        byte w = Proportion(value, HEM_PROB_DIV_MAX_WEIGHT, len-1);
-        gfxDottedLine(x, y + 3, x + len, y + 3, p);
-        gfxRect(x + w, y, 2, 7);
-        if (EditMode() && is_cursor) gfxInvert(x-1, y, len+3, 7);
     }
 
     int GetNextWeightedDiv() {
@@ -290,7 +282,7 @@ private:
         }
         int index = 0;
         int counter = 0;
-        while (counter < HEM_PROB_DIV_MAX_LOOP_LENGTH) {
+        while (counter < MAX_LOOP_LENGTH) {
             int div = GetNextWeightedDiv();
             if (div == 0) {
                 break;
