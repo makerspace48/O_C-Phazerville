@@ -325,18 +325,28 @@ public:
         }
     }
 
+    void DrawPopup() {
+        graphics.clearRect(24, 23, 80, 18);
+        graphics.drawFrame(25, 24, 78, 16);
+
+        graphics.setPrintPos(29, 28);
+        graphics.print("Clock ");
+        if (clock_m->IsRunning())
+          graphics.print("Start");
+        else
+          graphics.print(clock_m->IsPaused() ? "Armed" : "Stop");
+    }
+
     void View() {
         if (config_menu) {
             DrawConfigMenu();
-            return;
+            //return;
         }
-
-        if (clock_setup) {
+        else if (clock_setup) {
             HS::clock_setup_applet.View(LEFT_HEMISPHERE);
-            return;
+            //return;
         }
-
-        if (help_hemisphere > -1) {
+        else if (help_hemisphere > -1) {
             int index = my_applet[help_hemisphere];
             HS::available_applets[index].View(help_hemisphere);
         } else {
@@ -355,6 +365,10 @@ public:
 
             if (select_mode == LEFT_HEMISPHERE) graphics.drawFrame(0, 0, 64, 64);
             if (select_mode == RIGHT_HEMISPHERE) graphics.drawFrame(64, 0, 64, 64);
+        }
+
+        if (OC::CORE::ticks - popup_tick < HEMISPHERE_CURSOR_TICKS) {
+            DrawPopup();
         }
     }
 
@@ -475,6 +489,7 @@ public:
             bool p = clock_m->IsPaused();
             clock_m->Start( !p );
         }
+        popup_tick = OC::CORE::ticks;
     }
 
     void ToggleClockSetup() {
@@ -512,6 +527,7 @@ private:
 
     int help_hemisphere; // Which of the hemispheres (if any) is in help mode, or -1 if none
     uint32_t click_tick; // Measure time between clicks for double-click
+    uint32_t popup_tick; // for button feedback
     int first_click; // The first button pushed of a double-click set, to see if the same one is pressed
     ClockManager *clock_m = clock_m->get();
 

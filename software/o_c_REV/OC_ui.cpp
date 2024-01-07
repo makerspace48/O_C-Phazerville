@@ -123,6 +123,12 @@ UiMode Ui::DispatchEvents(const App *app) {
 
     switch (event.type) {
       case UI::EVENT_BUTTON_PRESS:
+#ifdef VOR
+        if (OC::CONTROL_BUTTON_M == event.control) {
+            VBiasManager *vbias_m = vbias_m->get();
+            vbias_m->AdvanceBias();
+        } else
+#endif
         app->HandleButtonEvent(event);
         break;
       case UI::EVENT_BUTTON_DOWN:
