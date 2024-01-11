@@ -83,7 +83,7 @@ public:
     static int dynamicPulsesPerSequence[4]; // Stores the dynamic number of pulses per sequence for each divider
 
     void Controller() {
-        loop_linker - > RegisterDiv(hemisphere);
+        loop_linker -> RegisterDiv(hemisphere);
 
         // reset
         if (Clock(1)) {
