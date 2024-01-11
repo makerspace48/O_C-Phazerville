@@ -77,13 +77,12 @@ public:
         div_enabled ^= (0x01 << idx);
     }
 
-    static int currentDivider = 0;
-    bool dividerComplete[4] = {false, false, false, false}; // Tracks completion of each divider
-    int dividerPulseCount[4] = {0, 0, 0, 0}; // Tracks the number of pulses for each divider
-    const int pulsesPerSequence = 8; // Example: each sequence completes after 8 pulses
 
     void Controller() {
-
+        static int currentDivider = 0;
+        bool dividerComplete[4] = {false, false, false, false}; // Tracks completion of each divider
+        int dividerPulseCount[4] = {0, 0, 0, 0}; // Tracks the number of pulses for each divider
+        const int pulsesPerSequence = 8; // Example: each sequence completes after 8 pulses
         loop_linker->RegisterDiv(hemisphere);
 
         // reset
