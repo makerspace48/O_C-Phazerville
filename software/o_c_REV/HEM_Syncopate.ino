@@ -87,7 +87,7 @@ public:
         }
 
         if (Clock(0)) {
-        // sequence advance, get trigger bit for the current divider
+        // sequence advance, get trigger bit for the current divider only
         bool trig = divider[currentDivider].Poke();
 
         ForEachChannel(ch) {
