@@ -77,35 +77,58 @@ public:
         div_enabled ^= (0x01 << idx);
     }
 
+    static int currentDivider = 0;
+    bool dividerComplete[4] = {false, false, false, false}; // Tracks completion of each divider
+    int dividerPulseCount[4] = {0, 0, 0, 0}; // Tracks the number of pulses for each divider
+    const int pulsesPerSequence = 8; // Example: each sequence completes after 8 pulses
+
     void Controller() {
-        static int currentDivider = 0; // Added: State variable to track the current divider
+
         loop_linker->RegisterDiv(hemisphere);
 
         // reset
         if (Clock(1)) {
             Reset();
+            // Reset completion flags and pulse counts
+            for (int i = 0; i < 4; i++) {
+                dividerComplete[i] = false;
+                dividerPulseCount[i] = 0;
+            }
         }
 
         if (Clock(0)) {
-        // sequence advance, get trigger bit for the current divider only
-        bool trig = divider[currentDivider].Poke();
+            // sequence advance, get trigger bit for the current divider only
+            if (!dividerComplete[currentDivider]) {
+                bool trig = divider[currentDivider].Poke();
 
-        ForEachChannel(ch) {
-            // positive CV gate enables XOR
-            bool xor_mode = (In(ch) > 6*128);
+                ForEachChannel(ch) {
+                    // positive CV gate enables XOR
+                    bool xor_mode = (In(ch) > 6*128);
+        
+                    bool trig_out = false;
+                    if (Enabled(ch, currentDivider)) {
+                        trig_out = xor_mode ? (trig_out != trig) : (trig_out || trig);
+                    }
+        
+                    if (trig) {
+                        pulse_animation[currentDivider] = HEMISPHERE_PULSE_ANIMATION_TIME;
+                        dividerPulseCount[currentDivider]++;
+                    }
+                    if (trig_out) TrigOut(ch);
+                }
 
-            bool trig_out = false;
-            if (Enabled(ch, currentDivider)) {
-                trig_out = xor_mode ? (trig_out != trig) : (trig_out || trig);
+            // Check if the current divider sequence is complete
+            if (dividerPulseCount[currentDivider] >= pulsesPerSequence) {
+                dividerComplete[currentDivider] = true;
             }
-
-            if (trig) pulse_animation[currentDivider] = HEMISPHERE_PULSE_ANIMATION_TIME;
-
-            if (trig_out) TrigOut(ch);
         }
 
-        // Advance to the next divider
-        currentDivider = (currentDivider + 1) % 4;
+        // Check if current divider is complete and advance to next
+        if (dividerComplete[currentDivider]) {
+            currentDivider = (currentDivider + 1) % 4;
+            // Reset completion flag and pulse count for the next divider
+            dividerComplete[currentDivider] = false;
+            dividerPulseCount[currentDivider] = 0;
         }
 
         ForAllChannels(ch) {
