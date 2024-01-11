@@ -78,6 +78,7 @@ public:
     }
 
     void Controller() {
+        static int currentDivider = 0; // Added: State variable to track the current divider
         loop_linker->RegisterDiv(hemisphere);
 
         // reset
@@ -86,35 +87,31 @@ public:
         }
 
         if (Clock(0)) {
-          // sequence advance, get trigger bits
-          bool trig_q[4] = {
-            divider[0].Poke(),
-            divider[1].Poke(),
-            divider[2].Poke(),
-            divider[3].Poke()
-          };
+        // sequence advance, get trigger bit for the current divider
+        bool trig = divider[currentDivider].Poke();
 
-          ForEachChannel(ch) {
+        ForEachChannel(ch) {
             // positive CV gate enables XOR
             bool xor_mode = (In(ch) > 6*128);
 
-            bool trig = false;
-            ForAllChannels(i) {
-                if (Enabled(ch, i)) {
-                    trig = xor_mode ? (trig != trig_q[i]) : (trig || trig_q[i]);
-                }
-
-                if (trig_q[i]) pulse_animation[i] = HEMISPHERE_PULSE_ANIMATION_TIME;
+            bool trig_out = false;
+            if (Enabled(ch, currentDivider)) {
+                trig_out = xor_mode ? (trig_out != trig) : (trig_out || trig);
             }
 
-            if (trig) TrigOut(ch);
-          }
+            if (trig) pulse_animation[currentDivider] = HEMISPHERE_PULSE_ANIMATION_TIME;
+
+            if (trig_out) TrigOut(ch);
+        }
+
+        // Advance to the next divider
+        currentDivider = (currentDivider + 1) % 4;
         }
 
         ForAllChannels(ch) {
-          if (pulse_animation[ch] > 0) {
-              pulse_animation[ch]--;
-          }
+            if (pulse_animation[ch] > 0) {
+                pulse_animation[ch]--;
+            }
         }
     }
 
