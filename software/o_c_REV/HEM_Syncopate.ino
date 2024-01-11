@@ -78,9 +78,9 @@ public:
     }
 
     static int currentDivider = 0;
-    bool dividerComplete[4] = {false, false, false, false}; // Tracks completion of each divider
-    int dividerPulseCount[4] = {0, 0, 0, 0}; // Tracks the number of pulses for each divider
-    const int pulsesPerSequence = 8; // Example: each sequence completes after 8 pulses
+    static bool dividerComplete[4] = {false, false, false, false}; // Tracks completion of each divider
+    static int dividerPulseCount[4] = {0, 0, 0, 0}; // Tracks the number of pulses for each divider
+    static int dynamicPulsesPerSequence[4]; // Stores the dynamic number of pulses per sequence for each divider
 
     void Controller() {
         loop_linker - > RegisterDiv(hemisphere);
@@ -117,7 +117,7 @@ public:
                 }
 
                 // Check if the current divider sequence is complete
-                if (dividerPulseCount[currentDivider] >= pulsesPerSequence) {
+                if (dividerPulseCount[currentDivider] >= dynamicPulsesPerSequence[currentDivider]) {
                     dividerComplete[currentDivider] = true;
                 }
             }
