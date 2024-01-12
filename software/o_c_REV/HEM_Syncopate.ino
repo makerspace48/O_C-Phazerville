@@ -80,22 +80,30 @@ public:
     void Controller() {
         static int currentStep = 0; // Tracks the current step in the sequence
         const int totalSteps = 4;   // Total number of steps in the sequence
+        static bool isStepCompleted = false; // Tracks if the current step is completed
+    
         loop_linker->RegisterDiv(hemisphere);
     
         // reset
         if (Clock(1)) {
             Reset();
             currentStep = 0; // Reset the sequence step
+            isStepCompleted = false;
         }
     
         if (Clock(0)) {
-            // sequence advance, get trigger bits only for the current step
-            bool trig_q[4] = {false, false, false, false};
-            trig_q[currentStep] = divider[currentStep].Poke();
-    
-            if (trig_q[currentStep]) {
-                currentStep = (currentStep + 1) % totalSteps; // Advance to the next step in the sequence
+            // Only advance the sequence if the current step is completed
+            if (isStepCompleted) {
+                currentStep = (currentStep + 1) % totalSteps; // Advance to the next step
+                isStepCompleted = false; // Reset step completion flag
             }
+    
+            // Check if the current step is completed
+            isStepCompleted = divider[currentStep].Poke();
+    
+            // Process triggers for the current step
+            bool trig_q[4] = {false, false, false, false};
+            trig_q[currentStep] = isStepCompleted;
     
             ForAllChannels(ch) {
                 bool trig = false;
@@ -119,7 +127,6 @@ public:
             }
         }
     }
-
 
     void View() {
         DrawInterface();
