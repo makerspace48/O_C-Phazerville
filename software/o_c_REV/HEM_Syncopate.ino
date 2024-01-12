@@ -78,57 +78,68 @@ public:
     }
     
     void Controller() {
-        static int currentStep = 0; // Tracks the current step in the sequence
-        const int totalSteps = 4;   // Total number of steps in the sequence
+        static int currentStepSequence1 = 0; // Tracks the current step in sequence 1
+        static int currentStepSequence2 = 0; // Tracks the current step in sequence 2
+        const int stepsPerSequence = 2;      // Number of steps in each sequence
     
         loop_linker->RegisterDiv(hemisphere);
     
-        // reset
+        // Reset
         if (Clock(1)) {
             Reset();
-            currentStep = 0; // Reset the sequence step
+            currentStepSequence1 = 0; // Reset the sequence step for sequence 1
+            currentStepSequence2 = 0; // Reset the sequence step for sequence 2
         }
     
         if (Clock(0)) {
-            bool advanceStep = false;
+            // Process sequence 1
+            AdvanceSequence(currentStepSequence1, stepsPerSequence, 0);
     
-            // Process the current step
-            if (divider[currentStep].steps == 0) {
-                // If current divider is set to zero, skip this step
-                advanceStep = true;
-            } else if (divider[currentStep].Poke()) {
-                // If current step is completed, advance to next step
-                advanceStep = true;
-            }
+            // Process sequence 2
+            AdvanceSequence(currentStepSequence2, stepsPerSequence, 2);
     
-            if (advanceStep) {
-                currentStep = (currentStep + 1) % totalSteps;
-            }
+            // Trigger logic for both sequences
+            ProcessTriggers();
+        }
+    }
     
-            // Determine the trigger status for each step
-            bool trig_q[4] = {false, false, false, false};
-            trig_q[currentStep] = advanceStep;
+    void AdvanceSequence(int &currentStep, int totalSteps, int offset) {
+        bool advanceStep = false;
     
-            ForAllChannels(ch) {
-                bool trig = false;
-                bool xor_mode = (In(ch) > 6*128);
-    
-                ForAllChannels(i) {
-                    if (Enabled(ch, i)) {
-                        trig = xor_mode ? (trig != trig_q[i]) : (trig || trig_q[i]);
-                    }
-    
-                    if (trig_q[i]) pulse_animation[i] = HEMISPHERE_PULSE_ANIMATION_TIME;
-                }
-    
-                if (trig) TrigOut(ch);
-            }
+        // Process the current step
+        if (divider[currentStep + offset].steps == 0) {
+            // If current divider is set to zero, skip this step
+            advanceStep = true;
+        } else if (divider[currentStep + offset].Poke()) {
+            // If current step is completed, advance to next step
+            advanceStep = true;
         }
     
+        if (advanceStep) {
+            currentStep = (currentStep + 1) % totalSteps;
+        }
+    }
+    
+    void ProcessTriggers() {
+        bool trig_q[4] = {false, false, false, false};
+        
+        // Update trigger status for each sequence
+        trig_q[currentStepSequence1] = true;
+        trig_q[currentStepSequence2 + 2] = true;
+    
         ForAllChannels(ch) {
-            if (pulse_animation[ch] > 0) {
-                pulse_animation[ch]--;
+            bool trig = false;
+            bool xor_mode = (In(ch) > 6*128);
+    
+            ForAllChannels(i) {
+                if (Enabled(ch, i)) {
+                    trig = xor_mode ? (trig != trig_q[i]) : (trig || trig_q[i]);
+                }
+    
+                if (trig_q[i]) pulse_animation[i] = HEMISPHERE_PULSE_ANIMATION_TIME;
             }
+    
+            if (trig) TrigOut(ch);
         }
     }
 
