@@ -80,7 +80,6 @@ public:
     void Controller() {
         static int currentStep = 0; // Tracks the current step in the sequence
         const int totalSteps = 4;   // Total number of steps in the sequence
-        static bool isStepCompleted = false; // Tracks if the current step is completed
     
         loop_linker->RegisterDiv(hemisphere);
     
@@ -88,22 +87,20 @@ public:
         if (Clock(1)) {
             Reset();
             currentStep = 0; // Reset the sequence step
-            isStepCompleted = false;
         }
     
         if (Clock(0)) {
-            // Only advance the sequence if the current step is completed
-            if (isStepCompleted) {
-                currentStep = (currentStep + 1) % totalSteps; // Advance to the next step
-                isStepCompleted = false; // Reset step completion flag
+            // Process the current step
+            if (divider[currentStep].Poke()) {
+                // If current step is completed, advance to next step
+                currentStep = (currentStep + 1) % totalSteps;
             }
     
-            // Check if the current step is completed
-            isStepCompleted = divider[currentStep].Poke();
-    
-            // Process triggers for the current step
-            bool trig_q[4] = {false, false, false, false};
-            trig_q[currentStep] = isStepCompleted;
+            // Determine the trigger status for each step
+            bool trig_q[4];
+            for (int i = 0; i < 4; ++i) {
+                trig_q[i] = (i == currentStep); // Trigger is active for the current step
+            }
     
             ForAllChannels(ch) {
                 bool trig = false;
