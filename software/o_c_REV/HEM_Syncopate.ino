@@ -100,7 +100,7 @@ public:
             AdvanceSequence(currentStepSequence2, stepsPerSequence, 2);
     
             // Trigger logic for both sequences
-            ProcessTriggers();
+            ProcessTriggers(currentStepSequence1, currentStepSequence2);
         }
     }
     
