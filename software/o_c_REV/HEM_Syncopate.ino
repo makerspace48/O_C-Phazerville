@@ -77,66 +77,49 @@ public:
         div_enabled ^= (0x01 << idx);
     }
 
-    int currentDivider = 0;
-    bool dividerComplete[4] = {false, false, false, false}; // Tracks completion of each divider
-    int dividerPulseCount[4] = {0, 0, 0, 0}; // Tracks the number of pulses for each divider
-    int dynamicPulsesPerSequence[4]; // Stores the dynamic number of pulses per sequence for each divider
-
     void Controller() {
-        loop_linker -> RegisterDiv(hemisphere);
-
+        static int currentStep = 0; // Tracks the current step in the sequence
+        const int totalSteps = 4;   // Total number of steps in the sequence
+        loop_linker->RegisterDiv(hemisphere);
+    
         // reset
         if (Clock(1)) {
             Reset();
-            // Reset completion flags and pulse counts
-            for (int i = 0; i < 4; i++) {
-                dividerComplete[i] = false;
-                dividerPulseCount[i] = 0;
-            }
+            currentStep = 0; // Reset the sequence step
         }
-
+    
         if (Clock(0)) {
-            // sequence advance, get trigger bit for the current divider only
-            if (!dividerComplete[currentDivider]) {
-                bool trig = divider[currentDivider].Poke();
-
-                ForEachChannel(ch) {
-                    // positive CV gate enables XOR
-                    bool xor_mode = (In(ch) > 6 * 128);
-
-                    bool trig_out = false;
-                    if (Enabled(ch, currentDivider)) {
-                        trig_out = xor_mode ? (trig_out != trig) : (trig_out || trig);
-                    }
-
-                    if (trig) {
-                        pulse_animation[currentDivider] = HEMISPHERE_PULSE_ANIMATION_TIME;
-                        dividerPulseCount[currentDivider]++;
-                    }
-                    if (trig_out) TrigOut(ch);
-                }
-
-                // Check if the current divider sequence is complete
-                if (dividerPulseCount[currentDivider] >= dynamicPulsesPerSequence[currentDivider]) {
-                    dividerComplete[currentDivider] = true;
-                }
+            // sequence advance, get trigger bits only for the current step
+            bool trig_q[4] = {false, false, false, false};
+            trig_q[currentStep] = divider[currentStep].Poke();
+    
+            if (trig_q[currentStep]) {
+                currentStep = (currentStep + 1) % totalSteps; // Advance to the next step in the sequence
             }
-
-            // Check if current divider is complete and advance to next
-            if (dividerComplete[currentDivider]) {
-                currentDivider = (currentDivider + 1) % 4;
-                // Reset completion flag and pulse count for the next divider
-                dividerComplete[currentDivider] = false;
-                dividerPulseCount[currentDivider] = 0;
+    
+            ForAllChannels(ch) {
+                bool trig = false;
+                bool xor_mode = (In(ch) > 6*128);
+    
+                ForAllChannels(i) {
+                    if (Enabled(ch, i)) {
+                        trig = xor_mode ? (trig != trig_q[i]) : (trig || trig_q[i]);
+                    }
+    
+                    if (trig_q[i]) pulse_animation[i] = HEMISPHERE_PULSE_ANIMATION_TIME;
+                }
+    
+                if (trig) TrigOut(ch);
             }
         }
-
+    
         ForAllChannels(ch) {
             if (pulse_animation[ch] > 0) {
                 pulse_animation[ch]--;
             }
         }
     }
+
 
     void View() {
         DrawInterface();
