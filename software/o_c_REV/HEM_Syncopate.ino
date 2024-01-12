@@ -76,10 +76,11 @@ public:
     void ToggleDiv(int idx) {
         div_enabled ^= (0x01 << idx);
     }
-    
+
+    int currentStepSequence1 = 0; // Tracks the current step in sequence 1
+    int currentStepSequence2 = 0; // Tracks the current step in sequence 2
+
     void Controller() {
-        static int currentStepSequence1 = 0; // Tracks the current step in sequence 1
-        static int currentStepSequence2 = 0; // Tracks the current step in sequence 2
         const int stepsPerSequence = 2;      // Number of steps in each sequence
     
         loop_linker->RegisterDiv(hemisphere);
@@ -120,7 +121,7 @@ public:
         }
     }
     
-    void ProcessTriggers() {
+    void ProcessTriggers(int currentStepSequence1, int currentStepSequence2) {
         bool trig_q[4] = {false, false, false, false};
         
         // Update trigger status for each sequence
