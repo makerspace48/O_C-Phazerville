@@ -76,7 +76,7 @@ public:
     void ToggleDiv(int idx) {
         div_enabled ^= (0x01 << idx);
     }
-
+    
     void Controller() {
         static int currentStep = 0; // Tracks the current step in the sequence
         const int totalSteps = 4;   // Total number of steps in the sequence
@@ -90,21 +90,24 @@ public:
         }
     
         if (Clock(0)) {
-            // Check if the current divider is set to zero, if so, skip to next step
-            while (divider[currentStep].steps == 0 && currentStep < totalSteps) {
-                currentStep = (currentStep + 1) % totalSteps;
-            }
+            bool advanceStep = false;
     
             // Process the current step
-            bool triggerNow = divider[currentStep].Poke();
-            if (triggerNow) {
-                // Advance to the next step after triggering
+            if (divider[currentStep].steps == 0) {
+                // If current divider is set to zero, skip this step
+                advanceStep = true;
+            } else if (divider[currentStep].Poke()) {
+                // If current step is completed, advance to next step
+                advanceStep = true;
+            }
+    
+            if (advanceStep) {
                 currentStep = (currentStep + 1) % totalSteps;
             }
     
-            // Determine the trigger status for the current step
+            // Determine the trigger status for each step
             bool trig_q[4] = {false, false, false, false};
-            trig_q[currentStep] = triggerNow;
+            trig_q[currentStep] = advanceStep;
     
             ForAllChannels(ch) {
                 bool trig = false;
@@ -128,6 +131,7 @@ public:
             }
         }
     }
+
 
 
     void View() {
