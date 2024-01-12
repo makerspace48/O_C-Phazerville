@@ -90,17 +90,21 @@ public:
         }
     
         if (Clock(0)) {
-            // Process the current step
-            if (divider[currentStep].Poke()) {
-                // If current step is completed, advance to next step
+            // Check if the current divider is set to zero, if so, skip to next step
+            while (divider[currentStep].steps == 0 && currentStep < totalSteps) {
                 currentStep = (currentStep + 1) % totalSteps;
             }
     
-            // Determine the trigger status for each step
-            bool trig_q[4];
-            for (int i = 0; i < 4; ++i) {
-                trig_q[i] = (i == currentStep); // Trigger is active for the current step
+            // Process the current step
+            bool triggerNow = divider[currentStep].Poke();
+            if (triggerNow) {
+                // Advance to the next step after triggering
+                currentStep = (currentStep + 1) % totalSteps;
             }
+    
+            // Determine the trigger status for the current step
+            bool trig_q[4] = {false, false, false, false};
+            trig_q[currentStep] = triggerNow;
     
             ForAllChannels(ch) {
                 bool trig = false;
@@ -124,6 +128,7 @@ public:
             }
         }
     }
+
 
     void View() {
         DrawInterface();
