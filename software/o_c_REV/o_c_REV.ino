@@ -235,6 +235,17 @@ void FASTRUN loop() {
     if (millis() - LAST_REDRAW_TIME > REDRAW_TIMEOUT_MS)
       MENU_REDRAW = 1;
   }
+  if (Serial && Serial.available() > 0) {
+    Serial.read();
+    Serial.println("Hello World");
+    const uint8_t *data = display::frame_buffer.readable_frame();
+    const size_t size = SH1106_128x64_Driver::kFrameSize;
+    for (size_t i=0; i < size; i++) {
+      Serial.print(*data++);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
 }
 
 
